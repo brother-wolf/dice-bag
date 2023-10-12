@@ -2,14 +2,13 @@
 
 This library uses standard RPG notation for generating dice rolls producing a total but also a break down of all the rolls should they be needed.
 
-The library is not in crates.io yet. To import the library use the following:
-
+To import it use:
 
 ```rust
 // Cargo.toml
 
 [dependencies]
-dice-bag = { git = "https://codeberg.org/brotherwolf/dice-bag", tag = "v0.1.0" }
+dice-bag = "0.1"
 ```
 
 It has a main entry point of:
