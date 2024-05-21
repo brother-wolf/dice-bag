@@ -5,22 +5,33 @@ use regex::Regex;
 pub struct Dice {}
 
 impl Dice {
-    pub fn roll(num: usize, sides: usize, modifier: isize) -> RollResult {
-        let mut rng = rand::thread_rng();
-        let rolled = (0..num)
-            .map(|_| rng.gen_range(1..sides + 1))
-            .collect::<Vec<usize>>();
-        let total = rolled.iter().sum::<usize>() as isize + modifier;
-        let selected_rolls = rolled.clone();
-        RollResult {
-            total,
-            rolled: DiceRolls { rolls: rolled },
-            selected_rolls: DiceRolls {
-                rolls: selected_rolls,
-            },
-            sides,
-            num_dice: num,
-            modifier,
+    pub fn roll(num: usize, sides: usize, modifier: isize) -> Result<RollResult, String> {
+        match (num, sides) {
+            (n, s) if n < 1 && s < 2 => {
+                return Err(
+                    "There must be at least 1 die, and dice must have at least 2 sides".to_string(),
+                )
+            }
+            (n, _) if n < 1 => return Err("There must be at least 1 die".to_string()),
+            (_, s) if s < 2 => return Err("Dice must have at least 2 sides".to_string()),
+            _ => {
+                let mut rng = rand::thread_rng();
+                let rolled = (0..num)
+                    .map(|_| rng.gen_range(1..&sides + 1))
+                    .collect::<Vec<usize>>();
+                let total = rolled.iter().sum::<usize>() as isize + &modifier;
+                let selected_rolls = rolled.clone();
+                Ok(RollResult {
+                    total,
+                    rolled: DiceRolls { rolls: rolled },
+                    selected_rolls: DiceRolls {
+                        rolls: selected_rolls,
+                    },
+                    sides,
+                    num_dice: num,
+                    modifier,
+                })
+            }
         }
     }
 }
@@ -29,14 +40,13 @@ pub fn roll(dice: &str) -> AllRollResults {
     let re = Regex::new(r"([0-9]+)d([0-9]+)([-+]?[0-9]*)").unwrap();
     let rolled = re
         .captures_iter(dice)
-        .map(|cap| {
-            // println!("one: {} two: {} three: {}", &cap[1], &cap[2], &cap[3]);
-            let num = *&cap[1].parse::<usize>().unwrap();
-            let sides = *&cap[2].parse::<usize>().unwrap();
-            let modifier = if *&cap[3].is_empty() {
+        .flat_map(|cap| {
+            let num = cap[1].parse::<usize>().unwrap();
+            let sides = cap[2].parse::<usize>().unwrap();
+            let modifier = if cap[3].is_empty() {
                 0
             } else {
-                *&cap[3].parse::<isize>().unwrap()
+                cap[3].parse::<isize>().unwrap()
             };
             Dice::roll(num, sides, modifier)
         })
@@ -100,4 +110,79 @@ fn should_roll_3d6_plus_50_and_2d4() {
 #[test]
 fn should_roll_3d6_minus_6() {
     should_roll("3d6-6", -3, 12);
+}
+
+#[test]
+fn direct_roll_3_d_6_plus_6_produces_result_of_roll_result() {
+    let res = Dice::roll(3, 6, 6);
+    assert!(res.is_ok());
+}
+
+#[test]
+fn bad_dice_all_roll_results() {
+    let res = roll("3+2");
+    assert_eq!(res.total, 0);
+    assert_eq!(res.rolled.len(), 0);
+}
+
+#[test]
+fn nothing_to_do_all_roll_results() {
+    let res = roll("");
+    assert_eq!(res.total, 0);
+    assert_eq!(res.rolled.len(), 0);
+}
+
+#[test]
+fn no_sided_dice_all_roll_results() {
+    let res = roll("1d0");
+    assert_eq!(res.total, 0);
+    assert_eq!(res.rolled.len(), 0);
+}
+
+#[test]
+fn no_dice_all_roll_results() {
+    let res = roll("0d6");
+    assert_eq!(res.total, 0);
+    assert_eq!(res.rolled.len(), 0);
+}
+
+#[test]
+fn roll_no_sided_dice() {
+    let res = Dice::roll(3, 0, 0);
+    assert!(res.is_err());
+    assert_eq!(res.err().unwrap(), "Dice must have at least 2 sides");
+}
+
+#[test]
+fn roll_one_sided_dice() {
+    let res = Dice::roll(3, 1, 0);
+    assert!(res.is_err());
+    assert_eq!(res.err().unwrap(), "Dice must have at least 2 sides");
+}
+
+#[test]
+fn roll_no_dice() {
+    let res = Dice::roll(0, 6, 0);
+    assert!(res.is_err());
+    assert_eq!(res.err().unwrap(), "There must be at least 1 die");
+}
+
+#[test]
+fn roll_no_one_sided_dice() {
+    let res = Dice::roll(0, 1, 0);
+    assert!(res.is_err());
+    assert_eq!(
+        res.err().unwrap(),
+        "There must be at least 1 die, and dice must have at least 2 sides"
+    );
+}
+
+#[test]
+fn roll_no_zero_sided_dice() {
+    let res = Dice::roll(0, 0, 0);
+    assert!(res.is_err());
+    assert_eq!(
+        res.err().unwrap(),
+        "There must be at least 1 die, and dice must have at least 2 sides"
+    );
 }

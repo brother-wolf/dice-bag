@@ -8,7 +8,7 @@ To import it use:
 // Cargo.toml
 
 [dependencies]
-dice-bag = "0.1"
+dice-bag = "0.2"
 ```
 
 It has a main entry point of:
@@ -36,7 +36,9 @@ RollResult {
     pub modifier: isize,
 }
 ```
+
 e.g. for 3d10+1 rolling 6,5,2
+
 ```
 {
     total: 14,
@@ -91,21 +93,20 @@ You can directly use the roll method:
 dice::Dice::roll(3, 6, -2);
 ```
 
-which produces a single `RollResult`, for example:
+which produces a single `Result<RollResult, String>`, for example:
 
 ```
-{
+Ok( RollResult {
     total: 6
     rolled: [ 5, 2, 1 ]
     selected_rolls: [ 5, 2, 1 ]
     sides: 6
     num_dice: 3
     modifier: -2
-}
+} )
 ```
 
 Dice roll results are all sorted highest to lowest.
-
 
 Finally the `Display` for the results is overwritten to produce a parsable slug:
 
@@ -118,7 +119,6 @@ could produce:
 ```
 3d6-2,2d4+1:[4,2,1],[4,3]:13
 ```
-
 
 ```rust
 dice::roll("2d10+3")).to_string();
